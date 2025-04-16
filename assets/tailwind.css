@@ -4,3 +4,9 @@ html {
   height:582px ;    
   width: 800px;  
 } 
+body{
+  height: 100%;
+}
+#app{
+  height: 100%;
+}

@@ -1,11 +1,11 @@
 <script lang="ts" setup>
+import WeatherPopup from '@/components/WeatherPopup.vue';
+
  </script>
 
 <template>
-  <div class="   ">
-    <span class=" overflow-y-auto text-6xl break-all  ">
-       ss
-    </span>
+  <div class="h-full  flex justify-center items-center  ">
+    <WeatherPopup />
   </div>
 </template>
 
