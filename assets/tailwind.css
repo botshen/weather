@@ -1,8 +1,7 @@
 @import "tailwindcss";
 
 html {
-  height:582px ;    
-  width: 800px;  
+   width: 800px;  
 } 
 body{
   height: 100%;
