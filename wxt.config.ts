@@ -18,7 +18,7 @@ export default defineConfig({
     ],
   },
   runner: {
-    // disabled: true,
+    disabled: true,
   },
   vite: () => ({
     plugins: [Icons({ compiler: "vue3" }), Tailwindcss() as any],
