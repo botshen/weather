@@ -303,12 +303,33 @@ const fetchWeatherData = async () => {
     
     // 处理小时预报数据
     if (data.hourly) {
-      hourlyForecast.value = Array.from({ length: Math.min(24, data.hourly.time.length) }, (_, index) => ({
-        time: data.hourly.time[index],
-        temperature: Math.round(data.hourly.temperature_2m[index]),
-        weatherCode: data.hourly.weather_code[index],
-        precipProbability: data.hourly.precipitation_probability[index]
-      }));
+      const now = new Date()
+      const currentHour = now.getHours()
+      
+      // 找到当前小时在数组中的索引
+      const currentIndex = data.hourly.time.findIndex((time: string) => {
+        const timeDate = new Date(time)
+        return timeDate.getHours() === currentHour &&
+               timeDate.getDate() === now.getDate() &&
+               timeDate.getMonth() === now.getMonth()
+      })
+      
+      // 如果找到当前小时，从当前小时开始截取24小时的数据
+      if (currentIndex !== -1) {
+        hourlyForecast.value = Array.from({ length: 24 }, (_, index) => {
+          const dataIndex = currentIndex + index
+          // 确保不超出数据范围
+          if (dataIndex < data.hourly.time.length) {
+            return {
+              time: data.hourly.time[dataIndex],
+              temperature: Math.round(data.hourly.temperature_2m[dataIndex]),
+              weatherCode: data.hourly.weather_code[dataIndex],
+              precipProbability: data.hourly.precipitation_probability[dataIndex]
+            }
+          }
+          return null
+        }).filter(Boolean) as HourlyForecast[]
+      }
     }
     
     // 处理每日预报数据
@@ -368,10 +389,32 @@ onUnmounted(() => {
   stopAutoRefresh()
 })
 
-// 格式化时间的工具函数
+// 修改格式化小时的显示方式，去掉重复的"时"字
 const formatHour = (time: string) => {
-  if (!time) return '--';
-  return new Date(time).toLocaleTimeString('zh-CN', { hour: 'numeric' })
+  if (!time) return '--'
+  
+  const timeDate = new Date(time)
+  const now = new Date()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(now.getDate() + 1)
+  
+  const isToday = timeDate.getDate() === now.getDate()
+  const isTomorrow = timeDate.getDate() === tomorrow.getDate()
+  
+  // 只获取小时数字
+  const hour = timeDate.getHours()
+  
+  if (isToday) {
+    // 今天只显示小时
+    return `${hour}时`
+  } else if (isTomorrow) {
+    // 明天显示 "+1"
+    return `+1 ${hour}时`
+  } else {
+    // 其他日期显示 "+n"
+    const dayDiff = Math.floor((timeDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+    return `+${dayDiff} ${hour}时`
+  }
 }
 
 const formatDay = (date: string) => {
