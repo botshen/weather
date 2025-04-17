@@ -220,11 +220,29 @@ const getCurrentPosition = (): Promise<GeolocationPosition> => {
       return
     }
 
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 0
-    })
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log('获取到的地理位置:', {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: new Date(position.timestamp).toLocaleString()
+        })
+        resolve(position)
+      },
+      (error) => {
+        console.error('获取地理位置失败:', {
+          code: error.code,
+          message: error.message
+        })
+        reject(error)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    )
   })
 }
 

@@ -34,7 +34,10 @@ export default defineConfig({
       name: "weather-extension",
       description: "weather-extension",
       permissions,
-      host_permissions: ["<all_urls>"],
+      host_permissions: [
+        "https://nominatim.openstreetmap.org/*",
+        "https://api.open-meteo.com/*"
+      ],
     };
   },
   autoIcons: {
