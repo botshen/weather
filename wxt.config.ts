@@ -28,7 +28,7 @@ export default defineConfig({
     },
   }),
   manifest: ({ browser }) => {
-    const permissions = ["storage", "tabs"];
+    const permissions = ["geolocation"];
 
     return {
       name: "weather-extension",

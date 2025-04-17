@@ -164,9 +164,9 @@ const props = defineProps<{
   longitude?: number
 }>()
 
-// 使用北京的经纬度
-const defaultLatitude = 39.9042
-const defaultLongitude = 116.4074
+// 添加响应式经纬度
+const currentLatitude = ref<number | null>(null)
+const currentLongitude = ref<number | null>(null)
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -175,6 +175,9 @@ const emit = defineEmits<{
 const loading = ref(true)
 const error = ref('')
 const weatherData = ref<WeatherData | null>(null)
+
+// 添加简单的缓存机制
+const locationCache = new Map<string, string>()
 
 // 将getWeatherIcon移到组件顶层，使其可以在模板中使用
 const getWeatherIcon = (code: number): string => {
@@ -209,16 +212,98 @@ const getWeatherIcon = (code: number): string => {
   return iconMapping[code] || '❓'; // 默认问号图标
 }
 
+// 获取地理位置
+const getCurrentPosition = (): Promise<GeolocationPosition> => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('浏览器不支持地理定位'))
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 0
+    })
+  })
+}
+
+// 修改 getLocationName 函数，添加缓存
+const getLocationName = async (latitude: number, longitude: number): Promise<string> => {
+  // 生成缓存 key
+  const cacheKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`
+  
+  // 检查缓存
+  if (locationCache.has(cacheKey)) {
+    return locationCache.get(cacheKey)!
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&accept-language=zh-CN`,
+      {
+        headers: {
+          'User-Agent': 'WeatherExtension/1.0' // OpenStreetMap 要求提供 User-Agent
+        }
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('获取地点名称失败')
+    }
+
+    const data = await response.json()
+    
+    // 根据返回数据构建地点名称
+    // address 对象包含多个层级的地理信息
+    const address = data.address
+    if (address) {
+      // 优先使用城市名称
+      if (address.city) {
+        locationCache.set(cacheKey, address.city)
+        return address.city
+      }
+      // 如果没有城市，尝试使用区或县
+      if (address.district) {
+        locationCache.set(cacheKey, address.district)
+        return address.district
+      }
+      if (address.county) {
+        locationCache.set(cacheKey, address.county)
+        return address.county
+      }
+      // 如果都没有，使用省/州名称
+      if (address.state) {
+        locationCache.set(cacheKey, address.state)
+        return address.state
+      }
+    }
+    
+    // 如果无法获取具体地名，返回经纬度
+    return `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`
+  } catch (err) {
+    console.error('反向地理编码错误:', err)
+    // 发生错误时返回经纬度
+    return `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`
+  }
+}
+
 const fetchWeatherData = async () => {
   try {
     loading.value = true
-    
-    const latitude = defaultLatitude
-    const longitude = defaultLongitude
-    
-    // 添加daily.weather_code参数
+
+    // 如果没有位置信息，先获取位置
+    if (!currentLatitude.value || !currentLongitude.value) {
+      const position = await getCurrentPosition()
+      currentLatitude.value = position.coords.latitude
+      currentLongitude.value = position.coords.longitude
+      
+      // 获取并更新位置名称
+      location.value = await getLocationName(currentLatitude.value, currentLongitude.value)
+    }
+
     const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,cloud_cover,pressure_msl,visibility,dew_point_2m,precipitation,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max&timezone=auto`
+      `https://api.open-meteo.com/v1/forecast?latitude=${currentLatitude.value}&longitude=${currentLongitude.value}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,cloud_cover,pressure_msl,visibility,dew_point_2m,precipitation,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max&timezone=auto`
     )
     
     if (!response.ok) {
