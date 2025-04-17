@@ -1,102 +1,110 @@
 <template>
-  <div class="bg-black text-white p-6 rounded-lg w-full">
-    <!-- 位置信息 -->
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-2xl font-semibold">{{ location }}</h1>
-        <p class="text-6xl mt-2">{{ weatherData?.temperature }}°</p>
-        <p class="text-lg">{{ weatherData?.description }}</p>
+  <div class="weather-popup bg-gray-100 text-gray-800 rounded-xl shadow-2xl max-h-[600px] w-[420px] flex flex-col overflow-hidden">
+    <!-- 顶部标题栏 -->
+    <div class="bg-gray-700 text-white py-3 px-4 flex justify-between items-center">
+      <div class="flex items-center">
+        <h1 class="text-xl font-medium">{{ location }} 天气</h1>
+        <span class="ml-2 text-xs text-gray-300">{{ weatherData?.time }}</span>
       </div>
+      <button 
+        @click="fetchWeatherData"
+        class="text-gray-300 hover:text-white flex items-center text-sm"
+        :disabled="loading"
+      >
+        <svg v-if="loading" class="animate-spin h-4 w-4 mr-1" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>刷新</span>
+      </button>
     </div>
-
-    <!-- 详细信息面板 -->
-    <div class="bg-gray-800 bg-opacity-50 rounded-lg p-4 mb-6">
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <p class="text-gray-400">风速/风向</p>
-          <p>{{ weatherData?.windSpeed }} mph {{ weatherData?.windDirection }}</p>
-        </div>
-        <div>
-          <p class="text-gray-400">湿度</p>
-          <p>{{ weatherData?.humidity }}%</p>
-        </div>
-        <div>
-          <p class="text-gray-400">云量</p>
-          <p>{{ weatherData?.cloudCover }}%</p>
-        </div>
-        <div>
-          <p class="text-gray-400">能见度</p>
-          <p>{{ weatherData?.visibility }} mi</p>
-        </div>
-        <div>
-          <p class="text-gray-400">露点</p>
-          <p>{{ weatherData?.dewPoint }}°</p>
-        </div>
-        <div>
-          <p class="text-gray-400">气压</p>
-          <p>{{ weatherData?.pressure }} mb</p>
-        </div>
-        <div>
-          <p class="text-gray-400">紫外线指数</p>
-          <p>{{ weatherData?.uvIndex }}</p>
-        </div>
-        <div>
-          <p class="text-gray-400">预测强度</p>
-          <p>{{ weatherData?.precipitationProbability }}%</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- 小时预报 -->
-    <div class="mb-6">
-      <h2 class="text-lg mb-3">小时预报</h2>
-      <div class="flex space-x-4 overflow-x-auto pb-2">
-        <div v-for="hour in hourlyForecast" :key="hour.time" class="flex flex-col items-center min-w-[60px]">
-          <p class="text-sm">{{ formatHour(hour.time) }}</p>
-          <div class="text-2xl my-2">{{ getWeatherIcon(hour.weatherCode) }}</div>
-          <p>{{ hour.temperature }}°</p>
-          <p class="text-blue-400 text-sm">{{ hour.precipProbability }}%</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- 每日预报 -->
-    <div>
-      <h2 class="text-lg mb-3">未来预报</h2>
-      <div class="space-y-2">
-        <div v-for="day in dailyForecast" :key="day.date" 
-             class="flex items-center justify-between py-2 border-t border-gray-700">
-          <span>{{ formatDay(day.date) }}</span>
-          <div class="text-2xl">{{ getWeatherIcon(day.weatherCode) }}</div>
-          <div class="flex items-center space-x-2">
-            <span>{{ day.maxTemp }}°</span>
-            <span class="text-gray-400">{{ day.minTemp }}°</span>
+    
+    <!-- 内容区域 - 使用可滚动容器 -->
+    <div class="overflow-y-auto custom-scrollbar flex-grow">
+      <!-- 主要天气信息 -->
+      <div class="p-4 border-b border-gray-200">
+        <div class="flex items-center">
+          <div class="text-6xl mr-4">{{ getWeatherIcon(weatherData?.weatherCode || 0) }}</div>
+          <div>
+            <p class="text-5xl font-light">{{ weatherData?.temperature }}°</p>
+            <p class="text-base mt-1 text-gray-600">{{ weatherData?.description }}</p>
           </div>
-          <span class="text-blue-400">{{ day.precipProbability }}%</span>
         </div>
       </div>
-    </div>
+      
+      <!-- 日出日落信息 -->
+      <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 flex justify-between text-sm text-gray-600">
+        <span>日出: {{ formatTime(weatherData?.sunrise) }}</span>
+        <span>日落: {{ formatTime(weatherData?.sunset) }}</span>
+      </div>
 
-    <!-- 日出日落信息 -->
-    <div class="mt-6 text-center text-sm text-gray-400">
-      <p>日出 {{ formatTime(weatherData?.sunrise) }} · 日落 {{ formatTime(weatherData?.sunset) }}</p>
-    </div>
+      <!-- 小时预报 -->
+      <div class="p-4 border-b border-gray-200">
+        <h2 class="text-sm uppercase font-semibold text-gray-500 mb-3">小时预报</h2>
+        <div class="flex space-x-4 overflow-x-auto custom-scrollbar-x pb-2">
+          <div v-for="hour in hourlyForecast" :key="hour.time" class="flex flex-col items-center min-w-[60px]">
+            <p class="text-xs text-gray-600">{{ formatHour(hour.time) }}</p>
+            <div class="text-xl my-1">{{ getWeatherIcon(hour.weatherCode) }}</div>
+            <p class="font-medium">{{ hour.temperature }}°</p>
+            <p class="text-blue-600 text-xs">{{ hour.precipProbability }}%</p>
+          </div>
+        </div>
+      </div>
 
-    <!-- 添加刷新按钮和更新时间 -->
-    <div class="text-center text-xs text-gray-400 mt-4">
-      <div class="flex items-center justify-center gap-2">
-        <button 
-          @click="fetchWeatherData"
-          class="text-blue-500 hover:text-blue-600 flex items-center gap-1"
-          :disabled="loading"
-        >
-          <span>刷新数据</span>
-          <svg v-if="loading" class="animate-spin h-4 w-4" viewBox="0 0 24 24">
-            <!-- 加载图标 -->
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        </button>
+      <!-- 详细信息面板 -->
+      <div class="p-4 border-b border-gray-200">
+        <h2 class="text-sm uppercase font-semibold text-gray-500 mb-3">当前详情</h2>
+        <div class="grid grid-cols-2 gap-y-3 gap-x-6">
+          <div class="flex items-center">
+            <span class="w-20 text-xs text-gray-500">风速/风向</span>
+            <span class="text-sm">{{ weatherData?.windSpeed }} mph {{ weatherData?.windDirection }}</span>
+          </div>
+          <div class="flex items-center">
+            <span class="w-20 text-xs text-gray-500">湿度</span>
+            <span class="text-sm">{{ weatherData?.humidity }}%</span>
+          </div>
+          <div class="flex items-center">
+            <span class="w-20 text-xs text-gray-500">云量</span>
+            <span class="text-sm">{{ weatherData?.cloudCover }}%</span>
+          </div>
+          <div class="flex items-center">
+            <span class="w-20 text-xs text-gray-500">能见度</span>
+            <span class="text-sm">{{ weatherData?.visibility }} mi</span>
+          </div>
+          <div class="flex items-center">
+            <span class="w-20 text-xs text-gray-500">露点</span>
+            <span class="text-sm">{{ weatherData?.dewPoint }}°</span>
+          </div>
+          <div class="flex items-center">
+            <span class="w-20 text-xs text-gray-500">气压</span>
+            <span class="text-sm">{{ weatherData?.pressure }} mb</span>
+          </div>
+          <div class="flex items-center">
+            <span class="w-20 text-xs text-gray-500">紫外线</span>
+            <span class="text-sm">{{ weatherData?.uvIndex }}</span>
+          </div>
+          <div class="flex items-center">
+            <span class="w-20 text-xs text-gray-500">降水概率</span>
+            <span class="text-sm">{{ weatherData?.precipitationProbability }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 每日预报 -->
+      <div class="p-4">
+        <h2 class="text-sm uppercase font-semibold text-gray-500 mb-3">未来预报</h2>
+        <div class="space-y-1">
+          <div v-for="day in dailyForecast" :key="day.date" 
+              class="flex items-center py-2 border-t border-gray-200 text-sm">
+            <span class="w-16">{{ formatDay(day.date) }}</span>
+            <div class="text-xl mx-4">{{ getWeatherIcon(day.weatherCode) }}</div>
+            <div class="flex items-center space-x-2 ml-auto">
+              <span class="font-medium">{{ day.maxTemp }}°</span>
+              <span class="text-gray-500">{{ day.minTemp }}°</span>
+            </div>
+            <span class="text-blue-600 ml-4 w-8 text-right">{{ day.precipProbability }}%</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -385,22 +393,46 @@ const getWindDirection = (degrees: number): string => {
 </script>
 
 <style scoped>
-/* 添加滚动条样式 */
-.overflow-x-auto {
+.weather-popup {
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* 自定义纵向滚动条 */
+.custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
 }
 
-.overflow-x-auto::-webkit-scrollbar {
-  height: 4px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-track {
+.custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.overflow-x-auto::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.3);
+  border-radius: 2px;
+}
+
+/* 自定义横向滚动条 */
+.custom-scrollbar-x {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.3) transparent;
+}
+
+.custom-scrollbar-x::-webkit-scrollbar {
+  height: 4px;
+}
+
+.custom-scrollbar-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar-x::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.3);
   border-radius: 2px;
 }
 </style> 
