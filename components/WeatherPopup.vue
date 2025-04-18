@@ -24,10 +24,10 @@
       <!-- 主要天气信息 -->
       <div class="p-4 border-b border-gray-200">
         <div class="flex items-center">
-          <div class="text-6xl mr-4">{{ getWeatherIcon(weatherData?.weatherCode || 0) }}</div>
+          <div class="text-6xl mr-4">{{ getWeatherIcon(getCurrentHourWeatherCode()) }}</div>
           <div>
-            <p class="text-5xl font-light">{{ weatherData?.temperature }}°</p>
-            <p class="text-base mt-1 text-gray-600">{{ weatherData?.description }}</p>
+            <p class="text-5xl font-light">{{ getCurrentHourTemperature() }}°</p>
+            <p class="text-base mt-1 text-gray-600">{{ getCurrentHourDescription() }}</p>
           </div>
         </div>
       </div>
@@ -535,6 +535,62 @@ const getWindDirection = (degrees: number): string => {
   const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
   const index = Math.round((degrees || 0) / 45) % 8
   return directions[index]
+}
+
+// 添加一个方法来获取当前小时的天气代码
+const getCurrentHourWeatherCode = (): number => {
+  if (!hourlyForecast.value || hourlyForecast.value.length === 0) {
+    return weatherData?.weatherCode || 0
+  }
+  
+  // 获取当前小时的天气代码
+  return hourlyForecast.value[0].weatherCode
+}
+
+// 获取当前小时的温度
+const getCurrentHourTemperature = (): number => {
+  if (!hourlyForecast.value || hourlyForecast.value.length === 0) {
+    return weatherData?.temperature || 0
+  }
+  
+  return hourlyForecast.value[0].temperature
+}
+
+// 获取当前小时的天气描述
+const getCurrentHourDescription = (): string => {
+  if (!hourlyForecast.value || hourlyForecast.value.length === 0) {
+    return weatherData?.description || ''
+  }
+  
+  const weatherCode = hourlyForecast.value[0].weatherCode
+  const weatherDescriptions: Record<number, string> = {
+    0: '晴天',
+    1: '基本晴朗',
+    2: '部分多云',
+    3: '多云',
+    45: '雾',
+    48: '雾凇',
+    51: '小雨',
+    53: '中雨',
+    55: '大雨',
+    61: '小雨',
+    63: '中雨',
+    65: '大雨',
+    71: '小雪',
+    73: '中雪',
+    75: '大雪',
+    77: '冰雹',
+    80: '小雨',
+    81: '中雨',
+    82: '大雨',
+    85: '小雪',
+    86: '大雪',
+    95: '雷雨',
+    96: '雷雨带冰雹',
+    99: '雷雨带冰雹'
+  }
+  
+  return weatherCode in weatherDescriptions ? weatherDescriptions[weatherCode] : '未知'
 }
 </script>
 
